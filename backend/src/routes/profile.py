@@ -1,17 +1,8 @@
 # routes/users.py
 from flask import Blueprint, request, jsonify
-from pymongo import MongoClient
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from src.database.db import users_collection
 
 users = Blueprint("users", __name__)
-
-# MongoDB setup (you can refactor this to a shared file later)
-client = MongoClient(os.getenv("MONGODB_URI", "mongodb://localhost:27017"))
-db = client["game"]
-users_collection = db["profiles"]
 
 @users.route("/user", methods=["POST"])
 def create_user():
@@ -46,3 +37,28 @@ def get_user(username):
     if user:
         return jsonify(user)
     return jsonify({"error": "User not found"}), 404
+
+
+@users.route("/user/<username>", methods=["DELETE"])
+def delete_user(username):
+    result = users_collection.delete_one({"username": username})
+    if result.deleted_count == 0:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({"message": "User deleted"}), 200
+
+
+@users.route("/user/<username>", methods=["PATCH"])
+def update_user(username):
+    data = request.json
+    allowed_fields = {"username", "lvl", "pfp"}
+    update_data = {k: v for k, v in data.items() if k in allowed_fields}
+
+    if not update_data:
+        return jsonify({"error": "No valid fields to update."}), 400
+
+    result = users_collection.update_one({"username": username}, {"$set": update_data})
+
+    if result.matched_count == 0:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({"message": "User updated", "updated_fields": update_data})
+

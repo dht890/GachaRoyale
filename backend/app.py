@@ -13,6 +13,5 @@ CORS(app)
 app.register_blueprint(cards)
 app.register_blueprint(users)
 
-
 if __name__ == "__main__":
     app.run(debug=True)
